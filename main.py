@@ -83,7 +83,7 @@ class OrderPane(QWidget):
         total = 0
         for item in self.orderDetails:
             total += item.price
-        print(total)
+        print("The total is: " + str(total))
         
 
 class MainWindow(QMainWindow):
