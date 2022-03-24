@@ -37,7 +37,6 @@ class MainWindow(QMainWindow):
         self.orderPanel_button.clicked.connect(self.openOrderPanel)
         self.layout.addWidget(self.orderPanel_button)
 
-    
     def openItemPanel(self):
         self.itemPanel.show()
 
