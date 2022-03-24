@@ -1,4 +1,4 @@
-from PySide6.QtCore import QObject, Signal, Slot, Qt, QEvent
+from PySide6.QtCore import Signal, Slot, Qt, QEvent
 from PySide6.QtGui import QMouseEvent, QAction, QCursor
 from PySide6.QtWidgets import (QMainWindow, 
     QHBoxLayout, QGridLayout, 

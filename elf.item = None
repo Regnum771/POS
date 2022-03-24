@@ -1,0 +1,132 @@
+[1mdiff --git a/main.py b/main.py[m
+[1mdeleted file mode 100644[m
+[1mindex 938c16a..0000000[m
+[1m--- a/main.py[m
+[1m+++ /dev/null[m
+[36m@@ -1,125 +0,0 @@[m
+[31m-from pickle import TRUE[m
+[31m-from tkinter import N[m
+[31m-[m
+[31m-from PySide6.QtWidgets import (QApplication, QMainWindow, [m
+[31m-    QGridLayout, QHBoxLayout, QVBoxLayout, [m
+[31m-    QPushButton, QWidget, QScrollArea,)[m
+[31m-from PySide6.QtCore import QObject, Signal, Slot, QSize, Qt[m
+[31m-class Item:[m
+[31m-    def __init__(self, name, price, column, row):[m
+[31m-        self.name = name[m
+[31m-        self.price = price[m
+[31m-        self.column = column[m
+[31m-        self.row = row[m
+[31m-[m
+[31m-class Button(QWidget):[m
+[31m-    ITEM_SELECTED = Signal(Item)[m
+[31m-[m
+[31m-    def __init__(self, item):[m
+[31m-        super().__init__()[m
+[31m-        self.item = item[m
+[31m-        button = QPushButton(self.item.name, self)[m
+[31m-        button.clicked.connect(self.onClick)[m
+[31m-        button.setFixedSize(100, 100)[m
+[31m-        [m
+[31m-        self.show()[m
+[31m-        [m
+[31m-    def onClick(self):[m
+[31m-        self.ITEM_SELECTED.emit(self.item)[m
+[31m-[m
+[31m-class ButtonPane(QWidget):[m
+[31m-    def __init__(self, items):[m
+[31m-        super().__init__()[m
+[31m-        self.items = items[m
+[31m-        self.buttons = [][m
+[31m-        [m
+[31m-        self.layout = QGridLayout(self)[m
+[31m-[m
+[31m-        self.initEmptyGrid(4, 4)[m
+[31m-        self.initSavedItems()[m
+[31m-[m
+[31m-    def initEmptyGrid(self, rowSpan, columnSpan):[m
+[31m-        for i in range(columnSpan):[m
+[31m-            for j in range(rowSpan):[m
+[31m-                button = QPushButton("")[m
+[31m-                button.setFixedSize(100, 100)[m
+[31m-                self.layout.addWidget(button, i, j, 1, 1)[m
+[31m-[m
+[31m-    def initSavedItems(self):[m
+[31m-        for item in self.items:[m
+[31m-            button = Button(item)[m
+[31m-            self.buttons.append(button)[m
+[31m-            self.layout.addWidget(button, item.row, item.column)[m
+[31m-[m
+[31m-    def connectButtonsToOrder(self, order):[m
+[31m-        for button in self.buttons:[m
+[31m-            button.ITEM_SELECTED.connect(order.addItemToOrder)[m
+[31m-[m
+[31m-class OrderPane(QWidget):[m
+[31m-    def __init__(self):[m
+[31m-        super().__init__()[m
+[31m-        [m
+[31m-        self.layout_main = QVBoxLayout(self)   [m
+[31m-        self.layout_orderDetails = QVBoxLayout()[m
+[31m-        self.layout_checkOut = QVBoxLayout()[m
+[31m-[m
+[31m-        button_total =  QPushButton("TOTAL")[m
+[31m-        button_tender = QPushButton("TENDER")[m
+[31m-        button_total.clicked.connect(self.checkOut)[m
+[31m-        self.layout_checkOut.addWidget(button_total)[m
+[31m-        self.layout_checkOut.addWidget(button_tender)[m
+[31m-[m
+[31m-        self.layout_main.addLayout(self.layout_orderDetails)[m
+[31m-        self.layout_main.setAlignment(Qt.AlignBottom)     [m
+[31m-        self.layout_main.addLayout(self.layout_checkOut)[m
+[31m-[m
+[31m-        self.orderDetails = [][m
+[31m-[m
+[31m-    def addItemToOrder(self, item):[m
+[31m-        self.orderDetails.append(item)[m
+[31m-        self.layout_orderDetails.addWidget(QPushButton(item.name))[m
+[31m-[m
+[31m-    def checkOut(self):[m
+[31m-        total = 0[m
+[31m-        for item in self.orderDetails:[m
+[31m-            total += item.price[m
+[31m-        print("The total is: " + str(total))[m
+[31m-        [m
+[31m-[m
+[31m-class MainWindow(QMainWindow):[m
+[31m-    def __init__(self, parent = None):[m
+[31m-        super().__init__(parent)[m
+[31m-        self.init_gui()[m
+[31m-    [m
+[31m-    def init_gui(self):[m
+[31m-        self.window = QWidget()[m
+[31m-        self.layout = QHBoxLayout()[m
+[31m-        self.setCentralWidget(self.window)[m
+[31m-        self.window.setLayout(self.layout)[m
+[31m-[m
+[31m-def main():[m
+[31m-    app = QApplication()       [m
+[31m-[m
+[31m-    #Will be read and constructed from a dictionary [m
+[31m-    items = [[m
+[31m-        Item("apple", 1, 0, 0),[m
+[31m-        Item("banana", 2, 1, 1),[m
+[31m-        Item("citrus", 0, 0, 3),[m
+[31m-        Item("dango", 0, 3, 0),[m
+[31m-        Item("grape", 0, 3, 2),[m
+[31m-        Item("japapeno", 0, 1, 3)[m
+[31m-    ][m
+[31m-    window = MainWindow()[m
+[31m-    buttonPane = ButtonPane(items)[m
+[31m-    orderPane = OrderPane()[m
+[31m-    orderPane2 = OrderPane()[m
+[31m-    window.layout.addWidget(buttonPane)[m
+[31m-    window.layout.addWidget(orderPane)[m
+[31m-[m
+[31m-    buttonPane.connectButtonsToOrder(orderPane)[m
+[31m-[m
+[31m-    window.show()[m
+[31m-    return app.exec()[m
+[31m-[m
+[31m-if __name__ == "__main__":[m
+[31m-    main()[m
+\ No newline at end of file[m
