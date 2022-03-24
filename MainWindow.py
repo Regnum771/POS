@@ -6,6 +6,8 @@ from OrderView import OrderView
 import sys
 import DatabaseOperation as dbo
 
+print("This is new")
+
 class MainWindow(QMainWindow):
     def __init__(self, parent = None):
         super(MainWindow, self).__init__(parent)
