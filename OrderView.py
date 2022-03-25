@@ -1,11 +1,11 @@
-from PySide6.QtCore import Signal, Slot, Qt, QEvent
-from PySide6.QtGui import QMouseEvent, QAction, QCursor
-from PySide6.QtWidgets import (QMainWindow, 
+from PySide6.QtCore import Signal, Qt, QEvent
+from PySide6.QtGui import QAction, QCursor
+from PySide6.QtWidgets import (
+    QMainWindow, 
     QHBoxLayout, QGridLayout, 
     QWidget, QMenu, 
     QPushButton, QDialog, QComboBox,
 )
-from bson.objectid import ObjectId
 
 class Button(QPushButton):
     ITEM_SELECTED = Signal(str)
