@@ -1,13 +1,12 @@
 
-from PySide6 import QtCore
 from PySide6.QtGui import Qt
-from PySide6.QtWidgets import (QApplication, QMainWindow, 
-QHBoxLayout, QVBoxLayout, QGridLayout, QWidget,
+from PySide6.QtWidgets import (
+    QMainWindow, 
+    QHBoxLayout, QVBoxLayout, QGridLayout, QWidget,
     QTableWidget, QTableWidgetItem,
     QLineEdit, QLabel, QPushButton, 
-    QDialog, QMessageBox, )
-from bson.objectid import ObjectId
-from DatabaseOperation import DatabaseOperation
+    QDialog, QMessageBox, 
+)
 
 class ItemView(QMainWindow):
     def __init__(self, dbo, parent = None):
@@ -75,10 +74,10 @@ class ItemPanel(QWidget):
         for i in range(100):
             item_name_widget = QTableWidgetItem("")
             item_id_widget = QTableWidgetItem("")
-            item_name_widget.setFlags(QtCore.Qt.ItemFlag.ItemIsSelectable |
-                QtCore.Qt.ItemFlag.ItemIsEnabled)
-            item_id_widget.setFlags(QtCore.Qt.ItemFlag.ItemIsSelectable |
-                QtCore.Qt.ItemFlag.ItemIsEnabled)
+            item_name_widget.setFlags(Qt.ItemFlag.ItemIsSelectable |
+                Qt.ItemFlag.ItemIsEnabled)
+            item_id_widget.setFlags(Qt.ItemFlag.ItemIsSelectable |
+                Qt.ItemFlag.ItemIsEnabled)
             self.items_table.setItem(self.row_count, 0, item_name_widget)
             self.items_table.setItem(self.row_count, 1, item_id_widget)
             self.items_table.hideRow(self.row_count)
