@@ -7,11 +7,12 @@ QHBoxLayout, QVBoxLayout, QGridLayout, QWidget,
     QLineEdit, QLabel, QPushButton, 
     QDialog, QMessageBox, )
 from bson.objectid import ObjectId
-import DatabaseOperation as dbo
+from DatabaseOperation import DatabaseOperation
 
 class ItemView(QMainWindow):
-    def __init__(self, parent = None):
+    def __init__(self, dbo, parent = None):
         super(ItemView, self).__init__(parent)
+        self.dbo = dbo
         self.parent = parent
 
         self.title = 'Item View'
@@ -24,15 +25,16 @@ class ItemView(QMainWindow):
         self.layout = QHBoxLayout()
         self.setCentralWidget(self.window)
         self.window.setLayout(self.layout)
-        self.item_panel = ItemPanel(self)
+        self.item_panel = ItemPanel(self.dbo, self)
         self.layout.addWidget(self.item_panel)
 
     def closeEvent(self, event):
         self.item_panel.updateInfo()
 
 class ItemPanel(QWidget):
-    def __init__(self, parent = None):
+    def __init__(self, dbo, parent = None):
         super(ItemPanel, self).__init__(parent)
+        self.dbo = dbo
         self.parent = parent
         self.init_gui()
 
@@ -65,7 +67,7 @@ class ItemPanel(QWidget):
         self.items_table.horizontalHeader().setStretchLastSection(True)
         self.items_table.hideColumn(1)
 
-        self.items_dict = dbo.read_all_items(sort = "name")
+        self.items_dict = self.dbo.read_all_items(sort = "name")
         self.item = None
         self.row_count = 0
         
@@ -179,7 +181,7 @@ class ItemPanel(QWidget):
         if not self.item["_id"]:
             self.items_table.removeRow(self.items_table.currentRow())
         else:    
-            if dbo.delete_item(self.item["_id"]):
+            if self.dbo.delete_item(self.item["_id"]):
                 self.items_dict.pop(self.item["_id"]) 
                 self.items_table.removeRow(self.items_table.currentRow())
                 self.row_count -= 1
@@ -204,11 +206,11 @@ class ItemPanel(QWidget):
         item_category = self.item_category_textbox.text().split(",")
 
         if self.item["_id"]:
-            self.item = dbo.item_document(
+            self.item = self.dbo.item_document(
                 self.item["_id"], item_name, item_price, item_category)
             
             try:
-                dbo.update_item(self.item["_id"], self.item)
+                self.dbo.update_item(self.item["_id"], self.item)
 
                 self.items_dict[self.item["_id"]]["name"] = item_name
                 self.items_dict[self.item["_id"]]["price"] = item_price
@@ -218,14 +220,14 @@ class ItemPanel(QWidget):
                 self.error_message.setText(str(e))
                 self.error_message.exec()
         else:
-            self.item = dbo.item_document(
+            self.item = self.dbo.item_document(
                 "", item_name, item_price, item_category)
             
             try:
-                inserted_item_id = str(dbo.insert_item(self.item))
+                inserted_item_id = str(self.dbo.insert_item(self.item))
                 self.item["_id"] = inserted_item_id
 
-                self.items_dict[inserted_item_id] = dbo.item_document(
+                self.items_dict[inserted_item_id] = self.dbo.item_document(
                     inserted_item_id, item_name, item_price, item_category
                 )
 
@@ -263,7 +265,7 @@ class ItemPanel(QWidget):
                 self.item_category_textbox.setText(
                     ",".join(self.item["category"]))
         else:    
-            self.item = dbo.empty_item()
+            self.item = self.dbo.empty_item()
             self.item_name_textbox.setText("")
             self.item_price_textbox.setText("")
             self.item_category_textbox.setText("")
