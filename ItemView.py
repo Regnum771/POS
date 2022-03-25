@@ -1,8 +1,11 @@
+
 from PySide6 import QtCore
-from PySide6.QtWidgets import (QApplication, QMainWindow, QHBoxLayout, QWidget,
+from PySide6.QtGui import Qt
+from PySide6.QtWidgets import (QApplication, QMainWindow, 
+QHBoxLayout, QVBoxLayout, QGridLayout, QWidget,
     QTableWidget, QTableWidgetItem,
     QLineEdit, QLabel, QPushButton, 
-    QDialog, QMessageBox)
+    QDialog, QMessageBox, )
 from bson.objectid import ObjectId
 import DatabaseOperation as dbo
 
@@ -12,15 +15,10 @@ class ItemView(QMainWindow):
         self.parent = parent
 
         self.title = 'Item View'
-        self.left = 50
-        self.top = 50
-        self.width = 800
-        self.height = 600
         self.init_gui()
     
     def init_gui(self):
         self.setWindowTitle(self.title)
-        self.setGeometry(self.left, self.top, self.width, self.height)
 
         self.window = QWidget()
         self.layout = QHBoxLayout()
@@ -42,20 +40,36 @@ class ItemPanel(QWidget):
         self.layout = QHBoxLayout()
         self.setLayout(self.layout)
         
-        self.init_item_table()
-        self.init_input_fields()
-        self.init_control_pallete()
+        item_table = self.init_item_table()
+        input_fields = self.init_input_fields()
+        control_pallete = self.init_control_pallete()
         self.init_pop_up()
 
+        wrapper_layout = QVBoxLayout()
+        wrapper_layout.addLayout(input_fields)
+        wrapper_layout.setAlignment(input_fields, Qt.AlignTop)
+        wrapper_layout.addLayout(control_pallete)
+        wrapper_layout.setAlignment(control_pallete, Qt.AlignRight)
+        self.layout.addLayout(item_table)
+        self.layout.addLayout(wrapper_layout)
+    
     """ INITIALIZATION
 
     """
     def init_item_table(self):
-        self.item = None
-        self.items_dict = dbo.read_all_items(sort = "name")
+        item_table_layout = QVBoxLayout()
+
         self.items_table = QTableWidget(100, 2, self)
+        self.items_table.setHorizontalHeaderLabels(["Item Name"])
+        self.items_table.setFixedWidth(150)
+        self.items_table.horizontalHeader().setStretchLastSection(True)
+        self.items_table.hideColumn(1)
+
+        self.items_dict = dbo.read_all_items(sort = "name")
+        self.item = None
         self.row_count = 0
-        #Populate empty table
+        
+        # Fill the table with empty invisble items
         for i in range(100):
             item_name_widget = QTableWidgetItem("")
             item_id_widget = QTableWidgetItem("")
@@ -68,7 +82,7 @@ class ItemPanel(QWidget):
             self.items_table.hideRow(self.row_count)
             self.row_count += 1
 
-        #Reset row count
+        # Fill the table with items from the database
         self.row_count = 0
         for key, item in self.items_dict.items():
             item_name_widget = self.items_table.item(self.row_count, 0)
@@ -79,61 +93,63 @@ class ItemPanel(QWidget):
 
             self.items_table.showRow(self.row_count)
             self.row_count += 1
-        self.items_table.hideColumn(1)
-
-        self.items_table.move(20, 20)
-        self.items_table.resize(200, 560)
-        self.items_table.horizontalHeader().setStretchLastSection(True)
-        self.items_table.setHorizontalHeaderLabels(["Item Name"])
+        
         self.items_table.currentItemChanged.connect(self.load)
 
+        item_table_layout.addWidget(self.items_table)
+        return item_table_layout
+
     def init_input_fields(self):
+        input_fields_layout = QGridLayout()
         # Input fields
         # Name
         self.item_name_textbox = QLineEdit(self)
-        self.item_name_textbox.move(400, 20)
-
+             
         self.item_name_label = QLabel("Item Name: ", self)
-        self.item_name_label.move(300, 20)
         self.item_name_label.setBuddy(self.item_name_textbox)
-
+        input_fields_layout.addWidget(self.item_name_label, 0, 0, 1, 1)
+        input_fields_layout.addWidget(self.item_name_textbox, 0, 2, 1, 2)
         # Price
         self.item_price_textbox = QLineEdit(self)
-        self.item_price_textbox.move(400, 60)
 
         self.item_price_label = QLabel("Item Price: ", self)
-        self.item_price_label.move(300, 60)
         self.item_price_label.setBuddy(self.item_price_textbox)   
-        
+        input_fields_layout.addWidget(self.item_price_label, 1, 0, 1, 1)
+        input_fields_layout.addWidget(self.item_price_textbox, 1, 2, 1, 2)
         # Category
         self.item_category_textbox = QLineEdit(self)
-        self.item_category_textbox.move(400, 100)
 
         self.item_category_label = QLabel("Item Category: ", self)
-        self.item_category_label.move(300, 100)
-        self.item_category_label.setBuddy(self.item_category_textbox)   
+        self.item_category_label.setBuddy(self.item_category_textbox)
+        input_fields_layout.addWidget(self.item_category_label, 2, 0, 1, 1)
+        input_fields_layout.addWidget(self.item_category_textbox, 2, 2, 1, 2)
+        
+        return input_fields_layout
 
     def init_control_pallete(self):
+        control_pallete_layout = QGridLayout()
+        
         # Buttons #
         # Delete
-        self.load_button = QPushButton('Delete', self)
-        self.load_button.move(350, 550)
-        self.load_button.clicked.connect(self.delete)
-
+        delete_button = QPushButton('Delete', self)
+        delete_button.clicked.connect(self.delete)
+        control_pallete_layout.addWidget(delete_button, 0, 0)    
         # New 
-        self.load_button = QPushButton('New', self)
-        self.load_button.move(450, 550)
-        self.load_button.clicked.connect(self.new)
+        new_button = QPushButton('New', self)
+        new_button.clicked.connect(self.new)
+        control_pallete_layout.addWidget(new_button, 0, 1)    
 
         # Reset
-        self.load_button = QPushButton('Reset', self)
-        self.load_button.move(550, 550)
-        self.load_button.clicked.connect(self.reset)
+        reset_button = QPushButton('Reset', self)
+        reset_button.clicked.connect(self.reset)
+        control_pallete_layout.addWidget(reset_button, 0, 2)    
 
         # Apply
-        self.apply_button = QPushButton('Apply', self)
-        self.apply_button.move(650, 550)
-        self.apply_button.clicked.connect(self.apply)
+        apply_button = QPushButton('Apply', self)
+        apply_button.clicked.connect(self.apply)
+        control_pallete_layout.addWidget(apply_button, 0, 3) 
+
+        return control_pallete_layout   
 
     def init_pop_up(self):
         # Dialog #
