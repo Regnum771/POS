@@ -1,50 +1,13 @@
-from PySide6.QtCore import Signal, Qt, QEvent
+from PySide6.QtCore import Signal, Qt, QEvent, QSize
 from PySide6.QtGui import QAction, QCursor
 from PySide6.QtWidgets import (
     QMainWindow, 
     QHBoxLayout, QVBoxLayout, QGridLayout, 
     QWidget, QMenu, 
     QTableWidget, QTableWidgetItem, QPushButton, QLabel,
-    QDialog, QComboBox, QSizePolicy
+    QDialog, QComboBox, QSizePolicy, 
 )
 
-class Button(QPushButton):
-    ITEM_SELECTED = Signal(str)
-
-    def __init__(self, button_id, item_id, item_name, parent = None):
-        super(Button, self).__init__(parent)
-        self.parent = parent
-        self.button_id = button_id
-        self.item_id = item_id
-        self.item_name = item_name
-        self.setText(item_name)
-
-        #self.clicked.connect(self.onClick)
-        self.installEventFilter(self)
-
-        self.setFixedSize(100, 100)
-        
-    def onClick(self):
-        self.ITEM_SELECTED.emit(self.item_id)
-    
-    def getButtonId(self):
-        return self.button_id
-    
-    def getItemId(self):
-        return self.item_id
-
-    def setItem(self, item_id, item_name):
-        self.item_id = item_id
-        self.item_name = item_name
-        self.setText(item_name)
-
-    def eventFilter(self, source, event):
-        if event.type() == QEvent.MouseButtonPress:
-            if event.button() == Qt.RightButton:
-                self.parent.selected_button = self
-            elif event.button() == Qt.LeftButton:
-                self.ITEM_SELECTED.emit(self.item_id)
-        return super().eventFilter(source, event)
 
 class OrderView(QMainWindow):
     def __init__(self, dbo, parent = None):
@@ -65,6 +28,10 @@ class OrderView(QMainWindow):
         self.order_panel = OrderPanel(self.dbo, self)
         self.layout.addWidget(self.button_panel)
         self.layout.addWidget(self.order_panel)
+
+        for button in self.button_panel.buttons:
+            button.ITEM_SELECTED.connect(self.order_panel.add_item_to_order)
+
     def closeEvent(self, event):
         self.button_panel.saveLayout()
 
@@ -180,16 +147,11 @@ class OrderPanel(QWidget):
         self.layout.setAlignment(control_pallete_layout, Qt.AlignBottom)
   
     def init_order_detail_panel(self):
-        item_table_layout = QVBoxLayout()
-
         self.items_table = QTableWidget(100, 2, self)
-        self.items_table.setHorizontalHeaderLabels(["Item Name"])
-        self.items_table.setFixedWidth(150)
-        self.items_table.horizontalHeader().setStretchLastSection(True)
-        self.items_table.hideColumn(1)
+        item_table_layout = QVBoxLayout()
+        item_table_layout.addWidget(self.items_table)
 
         self.items_dict = self.dbo.read_all_items(sort = "name")
-        self.item = None
         self.row_count = 0
         
         # Fill the table with empty invisble items
@@ -204,22 +166,15 @@ class OrderPanel(QWidget):
             self.items_table.setItem(self.row_count, 1, item_id_widget)
             self.items_table.hideRow(self.row_count)
             self.row_count += 1
-
-        # Fill the table with items from the database
         self.row_count = 0
-        for key, item in self.items_dict.items():
-            item_name_widget = self.items_table.item(self.row_count, 0)
-            item_name_widget.setText(item["name"])
-            
-            item_id_widget = self.items_table.item(self.row_count, 1)
-            item_id_widget.setText(key)
 
-            self.items_table.showRow(self.row_count)
-            self.row_count += 1
-        
-        #self.items_table.currentItemChanged.connect(self.load)
+        self.items_table.setHorizontalHeaderLabels(["Item Name", "Item Price"])
+        self.items_table.horizontalHeader().setStretchLastSection(True)
 
-        item_table_layout.addWidget(self.items_table)
+        self.items_table.setFixedWidth(325)
+        self.items_table.setColumnWidth(0, 200)
+        self.items_table.setColumnWidth(1, 100)
+
         return item_table_layout
 
     def init_control_pallete(self):
@@ -229,14 +184,66 @@ class OrderPanel(QWidget):
         total_button.clicked.connect(self.total)
         control_pallete_layout.addWidget(total_button, 0, 0)    
 
-        tender_button = QPushButton('Tender', self)
-        tender_button.clicked.connect(self.tender)
-        control_pallete_layout.addWidget(tender_button, 0, 1) 
+        reset_button = QPushButton('Reset', self)
+        reset_button.clicked.connect(self.reset)
+        control_pallete_layout.addWidget(reset_button, 0, 1) 
               
         return control_pallete_layout
 
-    def total(self):
-        return 0
+    def add_item_to_order(self, item_id):
+        self.items_table.showRow(self.row_count)
+        if item_id in self.items_dict:
+            self.items_table.item(self.row_count, 0).\
+                setText(self.items_dict[item_id]["name"])
+            self.items_table.item(self.row_count, 1).\
+                setText(str(self.items_dict[item_id]["price"]))
+            self.row_count += 1
 
-    def tender(self):
-        return 0
+    def total(self):
+        for i in range(self.row_count):
+            self.items_table.item(i, 0).setText("")
+            self.items_table.item(i, 1).setText("")
+            self.items_table.hideRow(i)
+        self.row_count = 0        
+
+    def reset(self):
+        for i in range(self.row_count):
+            self.items_table.item(i, 0).setText("")
+            self.items_table.item(i, 1).setText("")
+            self.items_table.hideRow(i)
+        self.row_count = 0  
+
+class Button(QPushButton):
+    ITEM_SELECTED = Signal(str)
+
+    def __init__(self, button_id, item_id, item_name, parent = None):
+        super(Button, self).__init__(parent)
+        self.parent = parent
+        self.button_id = button_id
+        self.item_id = item_id
+        self.item_name = item_name
+        self.setText(item_name)
+
+        #self.clicked.connect(self.onClick)
+        self.installEventFilter(self)
+
+        self.setFixedSize(100, 100)
+        
+    def getButtonId(self):
+        return self.button_id
+    
+    def getItemId(self):
+        return self.item_id
+
+    def setItem(self, item_id, item_name):
+        self.item_id = item_id
+        self.item_name = item_name
+        self.setText(item_name)
+
+    def eventFilter(self, source, event):
+        if event.type() == QEvent.MouseButtonPress:
+            if event.button() == Qt.RightButton:
+                self.parent.selected_button = self
+            elif event.button() == Qt.LeftButton:
+                self.ITEM_SELECTED.emit(self.item_id)
+        return super().eventFilter(source, event)
