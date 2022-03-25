@@ -166,6 +166,7 @@ class OrderPanel(QWidget):
             self.items_table.setItem(self.row_count, 1, item_id_widget)
             self.items_table.hideRow(self.row_count)
             self.row_count += 1
+        self.items_table.showRow(0)
         self.row_count = 0
 
         self.items_table.setHorizontalHeaderLabels(["Item Name", "Item Price"])
@@ -191,13 +192,13 @@ class OrderPanel(QWidget):
         return control_pallete_layout
 
     def add_item_to_order(self, item_id):
-        self.items_table.showRow(self.row_count)
         if item_id in self.items_dict:
             self.items_table.item(self.row_count, 0).\
                 setText(self.items_dict[item_id]["name"])
             self.items_table.item(self.row_count, 1).\
                 setText(str(self.items_dict[item_id]["price"]))
             self.row_count += 1
+            self.items_table.showRow(self.row_count)
 
     def total(self):
         for i in range(self.row_count):
