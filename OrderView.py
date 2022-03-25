@@ -2,9 +2,10 @@ from PySide6.QtCore import Signal, Qt, QEvent
 from PySide6.QtGui import QAction, QCursor
 from PySide6.QtWidgets import (
     QMainWindow, 
-    QHBoxLayout, QGridLayout, 
+    QHBoxLayout, QVBoxLayout, QGridLayout, 
     QWidget, QMenu, 
-    QPushButton, QDialog, QComboBox,
+    QTableWidget, QTableWidgetItem, QPushButton, QLabel,
+    QDialog, QComboBox, QSizePolicy
 )
 
 class Button(QPushButton):
@@ -51,10 +52,6 @@ class OrderView(QMainWindow):
         self.dbo = dbo
 
         self.title = 'Order Panel'
-        self.left = 50
-        self.top = 50
-        self.width = 800
-        self.height = 600
         self.init_gui()
 
     def init_gui(self):
@@ -65,8 +62,9 @@ class OrderView(QMainWindow):
         self.window.setLayout(self.layout)
 
         self.button_panel = ButtonPanel(self.dbo, self)
+        self.order_panel = OrderPanel(self.dbo, self)
         self.layout.addWidget(self.button_panel)
-    
+        self.layout.addWidget(self.order_panel)
     def closeEvent(self, event):
         self.button_panel.saveLayout()
 
@@ -160,3 +158,85 @@ class ButtonPanel(QWidget):
         for button in self.buttons:
             self.button_layout_dict[button.getButtonId()]["item_id"] = button.getItemId()
         self.dbo.save_button_layout(self.button_layout_dict)
+
+class OrderPanel(QWidget):
+    def __init__(self, dbo, parent = None):
+        super(OrderPanel, self).__init__(parent)
+        self.dbo = dbo
+        # Appearance Setting 
+        self.init_gui()
+
+    def init_gui(self):
+        self.layout = QVBoxLayout(self)
+        self.setLayout(self.layout)
+
+        order_detail_panel = self.init_order_detail_panel()
+        control_pallete_layout = self.init_control_pallete()
+
+        self.layout.addLayout(order_detail_panel)
+        self.layout.addLayout(control_pallete_layout)
+
+        self.layout.setAlignment(order_detail_panel, Qt.AlignTop)
+        self.layout.setAlignment(control_pallete_layout, Qt.AlignBottom)
+  
+    def init_order_detail_panel(self):
+        item_table_layout = QVBoxLayout()
+
+        self.items_table = QTableWidget(100, 2, self)
+        self.items_table.setHorizontalHeaderLabels(["Item Name"])
+        self.items_table.setFixedWidth(150)
+        self.items_table.horizontalHeader().setStretchLastSection(True)
+        self.items_table.hideColumn(1)
+
+        self.items_dict = self.dbo.read_all_items(sort = "name")
+        self.item = None
+        self.row_count = 0
+        
+        # Fill the table with empty invisble items
+        for i in range(100):
+            item_name_widget = QTableWidgetItem("")
+            item_id_widget = QTableWidgetItem("")
+            item_name_widget.setFlags(Qt.ItemFlag.ItemIsSelectable |
+                Qt.ItemFlag.ItemIsEnabled)
+            item_id_widget.setFlags(Qt.ItemFlag.ItemIsSelectable |
+                Qt.ItemFlag.ItemIsEnabled)
+            self.items_table.setItem(self.row_count, 0, item_name_widget)
+            self.items_table.setItem(self.row_count, 1, item_id_widget)
+            self.items_table.hideRow(self.row_count)
+            self.row_count += 1
+
+        # Fill the table with items from the database
+        self.row_count = 0
+        for key, item in self.items_dict.items():
+            item_name_widget = self.items_table.item(self.row_count, 0)
+            item_name_widget.setText(item["name"])
+            
+            item_id_widget = self.items_table.item(self.row_count, 1)
+            item_id_widget.setText(key)
+
+            self.items_table.showRow(self.row_count)
+            self.row_count += 1
+        
+        #self.items_table.currentItemChanged.connect(self.load)
+
+        item_table_layout.addWidget(self.items_table)
+        return item_table_layout
+
+    def init_control_pallete(self):
+        control_pallete_layout = QGridLayout()
+        
+        total_button = QPushButton('Total', self)
+        total_button.clicked.connect(self.total)
+        control_pallete_layout.addWidget(total_button, 0, 0)    
+
+        tender_button = QPushButton('Tender', self)
+        tender_button.clicked.connect(self.tender)
+        control_pallete_layout.addWidget(tender_button, 0, 1) 
+              
+        return control_pallete_layout
+
+    def total(self):
+        return 0
+
+    def tender(self):
+        return 0

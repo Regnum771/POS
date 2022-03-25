@@ -1,6 +1,8 @@
-from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget,
-    QPushButton,       
-    QVBoxLayout)
+from PySide6.QtWidgets import (
+    QApplication, QMainWindow, QWidget,           
+    QVBoxLayout, 
+    QPushButton,
+)
 from ItemView import ItemView
 from OrderView import OrderView
 import sys
