@@ -125,5 +125,10 @@ class DatabaseOperation:
             self.__button_layout, {"_id": ObjectId(button_id)}, {"item_id":new_item_id})
         return result
 
+    # Orders Specific Operations
+    def insert_order(self, order):
+        id = self.__insert_document(self.__orders, order)
+        return id
+
     def close_client(self):
         self.__client.close()

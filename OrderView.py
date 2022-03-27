@@ -1,3 +1,4 @@
+from time import strftime
 from PySide6.QtCore import Signal, Qt, QEvent, QSize
 from PySide6.QtGui import QAction, QCursor
 from PySide6.QtWidgets import (
@@ -5,9 +6,9 @@ from PySide6.QtWidgets import (
     QHBoxLayout, QVBoxLayout, QGridLayout, 
     QWidget, QMenu, 
     QTableWidget, QTableWidgetItem, QPushButton, QLabel,
-    QDialog, QComboBox, QSizePolicy, 
+    QDialog, QComboBox, QSizePolicy, QHeaderView
 )
-
+from datetime import datetime
 
 class OrderView(QMainWindow):
     def __init__(self, dbo, parent = None):
@@ -147,34 +148,56 @@ class OrderPanel(QWidget):
         self.layout.setAlignment(control_pallete_layout, Qt.AlignBottom)
   
     def init_order_detail_panel(self):
-        self.items_table = QTableWidget(100, 2, self)
+        self.items_table = QTableWidget(100, 4, self)
         item_table_layout = QVBoxLayout()
         item_table_layout.addWidget(self.items_table)
 
+        self.order_total = 0
+        self.current_order = {
+            "date":"",
+            "time":"",
+            "order_details":{},
+            "total":""
+        }
+        
         self.items_dict = self.dbo.read_all_items(sort = "name")
         self.row_count = 0
         
         # Fill the table with empty invisble items
         for i in range(100):
             item_name_widget = QTableWidgetItem("")
-            item_id_widget = QTableWidgetItem("")
+            item_price_widget = QTableWidgetItem("0")
+            item_quantity_widget = QTableWidgetItem("0")
+            item_total_widget = QTableWidgetItem("0")
+
             item_name_widget.setFlags(Qt.ItemFlag.ItemIsSelectable |
                 Qt.ItemFlag.ItemIsEnabled)
-            item_id_widget.setFlags(Qt.ItemFlag.ItemIsSelectable |
+            item_price_widget.setFlags(Qt.ItemFlag.ItemIsSelectable |
                 Qt.ItemFlag.ItemIsEnabled)
+            item_quantity_widget.setFlags(Qt.ItemFlag.ItemIsSelectable |
+                Qt.ItemFlag.ItemIsEnabled)
+            item_total_widget.setFlags(Qt.ItemFlag.ItemIsSelectable |
+                Qt.ItemFlag.ItemIsEnabled)
+
             self.items_table.setItem(self.row_count, 0, item_name_widget)
-            self.items_table.setItem(self.row_count, 1, item_id_widget)
+            self.items_table.setItem(self.row_count, 1, item_price_widget)
+            self.items_table.setItem(self.row_count, 2, item_quantity_widget)
+            self.items_table.setItem(self.row_count, 3, item_total_widget)
+
             self.items_table.hideRow(self.row_count)
             self.row_count += 1
         self.items_table.showRow(0)
         self.row_count = 0
 
-        self.items_table.setHorizontalHeaderLabels(["Item Name", "Item Price"])
-        self.items_table.horizontalHeader().setStretchLastSection(True)
+        self.items_table.setHorizontalHeaderLabels(
+            ["Item Name", "Price", "Qty", "Total"])
+        self.items_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
 
-        self.items_table.setFixedWidth(325)
+        self.items_table.setFixedWidth(400)
         self.items_table.setColumnWidth(0, 200)
-        self.items_table.setColumnWidth(1, 100)
+        self.items_table.setColumnWidth(1, 50)
+        self.items_table.setColumnWidth(2, 50)
+        self.items_table.setColumnWidth(3, 50)
 
         return item_table_layout
 
@@ -192,27 +215,76 @@ class OrderPanel(QWidget):
         return control_pallete_layout
 
     def add_item_to_order(self, item_id):
+        price = 0
         if item_id in self.items_dict:
+            price = self.items_dict[item_id]["price"]
             self.items_table.item(self.row_count, 0).\
                 setText(self.items_dict[item_id]["name"])
             self.items_table.item(self.row_count, 1).\
-                setText(str(self.items_dict[item_id]["price"]))
+                setText(str(price))
+            self.items_table.item(self.row_count, 2).\
+                setText("1")
+            self.items_table.item(self.row_count, 3).\
+                setText(str(price))
             self.row_count += 1
             self.items_table.showRow(self.row_count)
+        if item_id in self.current_order["order_details"]:
+            self.current_order["order_details"][item_id]["quantity"] += 1
+            self.current_order["order_details"][item_id]["total"] += price
+        else:
+            self.current_order["order_details"][item_id] = {
+                "item_id": item_id, "quantity":1, "total":price
+                }
+        self.order_total += price
 
     def total(self):
-        for i in range(self.row_count):
-            self.items_table.item(i, 0).setText("")
-            self.items_table.item(i, 1).setText("")
-            self.items_table.hideRow(i)
-        self.row_count = 0        
+        date_time = datetime.now()
+        
+        # Set 
+        self.current_order["date"] = date_time.strftime("%d/%m/%Y")
+        self.current_order["time"] = date_time.strftime("%H:%M:%S")
+        self.current_order["order_details"] = list(self.current_order["order_details"].values())
+        self.current_order["total"] = self.order_total
+        
+        if self.dbo.insert_order(self.current_order):
+            # Reset table
+            for i in range(self.row_count + 1):
+                self.items_table.item(i, 0).setText("")
+                self.items_table.item(i, 1).setText("0")
+                self.items_table.item(i, 2).setText("0")
+                self.items_table.item(i, 3).setText("0")
+
+                self.items_table.hideRow(i)
+            self.row_count = 0    
+            self.items_table.showRow(0)
+
+            print(self.current_order)
+
+            # Reset global variable
+            self.order_total = 0
+            self.current_order = self.current_order = {
+                "date":"",
+                "time":"",
+                "order_details":{},
+                "total":""
+            }
 
     def reset(self):
         for i in range(self.row_count):
             self.items_table.item(i, 0).setText("")
-            self.items_table.item(i, 1).setText("")
+            self.items_table.item(i, 1).setText("0")
+            self.items_table.item(i, 2).setText("0")
+            self.items_table.item(i, 3).setText("0")
             self.items_table.hideRow(i)
         self.row_count = 0  
+        self.items_table.showRow(0)
+
+        self.current_order = self.current_order = {
+            "date":"",
+            "time":"",
+            "order_details":{},
+            "total":""
+        }
 
 class Button(QPushButton):
     ITEM_SELECTED = Signal(str)
