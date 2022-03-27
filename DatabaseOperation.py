@@ -41,7 +41,7 @@ class DatabaseOperation:
     """PUBLIC
     """
     # Item Specific Operations
-    def empty_item():
+    def empty_item(self):
         return {
             "_id":"",
             "name":"",
@@ -49,7 +49,7 @@ class DatabaseOperation:
             "category":[]
         }
 
-    def item_document(item_id = "", name = "", price = "", category = []):
+    def item_document(self, item_id = "", name = "", price = "", category = []):
         item_document = {
             "_id": item_id,
             "name": name,
@@ -58,7 +58,7 @@ class DatabaseOperation:
         }
         return item_document
         
-    def validate_item(item):
+    def validate_item(self, item):
         if not item["name"]:
             raise ValueError("Item name cannot be empty")
         if not item["price"]:

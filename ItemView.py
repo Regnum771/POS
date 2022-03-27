@@ -1,4 +1,3 @@
-
 from PySide6.QtGui import Qt
 from PySide6.QtWidgets import (
     QMainWindow, 
@@ -95,6 +94,7 @@ class ItemPanel(QWidget):
             self.items_table.showRow(self.row_count)
             self.row_count += 1
         
+        self.items_table.showRow(self.row_count)
         self.items_table.currentItemChanged.connect(self.load)
 
         item_table_layout.addWidget(self.items_table)
@@ -177,12 +177,11 @@ class ItemPanel(QWidget):
 
     """
     def delete(self):
-        if not self.item["_id"]:
-            self.items_table.removeRow(self.items_table.currentRow())
-        else:    
+        if self.item["_id"]: 
             if self.dbo.delete_item(self.item["_id"]):
                 self.items_dict.pop(self.item["_id"]) 
                 self.items_table.removeRow(self.items_table.currentRow())
+                self.error_message.setText("Item deleted successfully")
                 self.row_count -= 1
 
     def new(self):
@@ -233,7 +232,12 @@ class ItemPanel(QWidget):
                 self.items_table.item(self.row_count, 0).setText(item_name)
                 self.items_table.item(self.row_count, 1).setText(inserted_item_id)
 
-                self.row_count += 1               
+                self.error_message.setText("Item inserted successfully")
+                self.error_message.exec()
+
+                self.row_count += 1
+                self.items_table.showRow(self.row_count)
+               
             except ValueError as e:
                 self.error_message.setText(str(e))
                 self.error_message.exec()
