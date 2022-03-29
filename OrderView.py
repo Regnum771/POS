@@ -11,11 +11,12 @@ from PySide6.QtWidgets import (
 from datetime import datetime
 
 class OrderView(QMainWindow):
-    def __init__(self, dbo, parent = None):
+    def __init__(self, model, parent = None):
         super(OrderView, self).__init__(parent)
-        self.dbo = dbo
+        self.parent = parent
+        self.model = model
 
-        self.title = 'Order Panel'
+        self.title = "Order View"
         self.init_gui()
 
     def init_gui(self):
@@ -25,27 +26,23 @@ class OrderView(QMainWindow):
         self.setCentralWidget(self.window)
         self.window.setLayout(self.layout)
 
-        self.button_panel = ButtonPanel(self.dbo, self)
-        self.order_panel = OrderPanel(self.dbo, self)
+        self.order_panel = OrderPanel(self.model, self)
+        self.button_panel = ButtonPanel(self.model, self)
         self.layout.addWidget(self.button_panel)
         self.layout.addWidget(self.order_panel)
 
-        for button in self.button_panel.buttons:
-            button.ITEM_SELECTED.connect(self.order_panel.add_item_to_order)
-
     def closeEvent(self, event):
-        self.button_panel.saveLayout()
+        self.model.save_button_layout()
 
 class ButtonPanel(QWidget):
-    def __init__(self, dbo, parent = None):
+    def __init__(self, model, parent = None):
         super(ButtonPanel, self).__init__(parent)
-        self.dbo = dbo
-        self.item_dict = self.dbo.read_all_items(sort = "name")
-        self.button_layout_dict = self.dbo.read_button_layout()
-        self.buttons = []
+        self.parent = parent
+        self.model = model
+        self.selected_button = None
 
-        # Appearance Setting
         self.init_gui()
+        self.init_button_layout()
         
     def init_gui(self):
         #Layout Management
@@ -53,84 +50,85 @@ class ButtonPanel(QWidget):
         self.setLayout(self.layout)
 
         # Custom Context Menu
-        self.button_menu = QMenu(self)
+        self.button_context_menu = QMenu(self)
 
-        button_config_action = QAction("Set Item", self.button_menu)
-        button_config_action.triggered.connect(self.onItemConfigAction)
+        button_config_action = QAction("Set Item", self.button_context_menu)
+        button_config_action.triggered.connect(self.init_button_config_dialog)
+        self.button_context_menu.addAction(button_config_action)
 
-        self.button_menu.addAction(button_config_action)
-        # Button Layout
-        self.selected_button = None
-        self.initSavedItems()
+        clear_button_config_action = QAction("Clear", self.button_context_menu)
+        clear_button_config_action.triggered.connect(self.clear_button_config)
+        self.button_context_menu.addAction(clear_button_config_action)
 
         # Button Configuration Dialog
+        config_dialog_layout = QHBoxLayout()
         self.button_config_dialog = QDialog(self)
-        button_config_dialog_layout = QHBoxLayout()
-        self.button_config_dialog.setLayout(button_config_dialog_layout)
+        self.button_config_dialog.setLayout(config_dialog_layout)
 
         self.item_selection_comboBox = QComboBox(self.button_config_dialog)
-
         i = 0
-        for key, value in self.item_dict.items():
+        for key, value in self.model.item_dict.items():
             self.item_selection_comboBox.addItem(value["name"])
             self.item_selection_comboBox.setItemData(i, key, Qt.UserRole + 1)
             i += 1
-        
-        button_config_dialog_layout.addWidget(self.item_selection_comboBox)
 
-        change_dialog_discard_button = QPushButton(self.button_config_dialog)
-        change_dialog_discard_button.setText("Save")
-        change_dialog_discard_button.clicked.connect(self.onItemConfigSave)
-        button_config_dialog_layout.addWidget(change_dialog_discard_button)
+        save_config_button = QPushButton("Save", self.button_config_dialog)
+        save_config_button.clicked.connect(self.save_button_config)
 
-    def initEmptyGrid(self, rowSpan, columnSpan):
-        for i in range(rowSpan):
-            for j in range(columnSpan):
-                button = QPushButton("")
-                self.layout.addWidget(button, i, j, 1, 1)
+        config_dialog_layout.addWidget(self.item_selection_comboBox)
+        config_dialog_layout.addWidget(save_config_button)
 
-    def initSavedItems(self):
-        for key, value in self.button_layout_dict.items():
+    def init_button_layout(self):
+        for key, value in self.model.button_layout_dict.items():
             button_id = key
             row = value["row"]
             col = value["column"]
             item_id = value["item_id"]
 
-            if item_id in self.item_dict:
-                item_name = self.item_dict[item_id]["name"]
+            if item_id in self.model.item_dict:
+                item_name = self.model.item_dict[item_id]["name"]
             else:
                 item_name = "EMPTY"
 
             button = Button(button_id, item_id, item_name, self)
             button.setContextMenuPolicy(Qt.CustomContextMenu)
-            button.customContextMenuRequested.connect(self.onContextMenu)
-            
+            button.customContextMenuRequested.connect(self.init_context_menu)
+            button.ITEM_SELECTED.connect(self.parent.order_panel.add_item_to_order)
+
             self.layout.addWidget(button, row, col, 1, 1)
-            self.buttons.append(button)
     
+    def clear_button_config(self):
+        self.selected_button.set_item("", "EMPTY")
+        self.model.button_layout_dict[self.selected_button.get_button_id()]["item_id"] = ""
     # Slot
-    def onContextMenu(self, point):
-        self.button_menu.exec(QCursor.pos())
+    def init_context_menu(self, point):
+        self.button_context_menu.exec(QCursor.pos())
     
-    def onItemConfigAction(self, s):
+    def init_button_config_dialog(self, s):
         self.button_config_dialog.exec()
     
-    def onItemConfigSave(self):
-        self.selected_button.setItem(
+    def save_button_config(self):
+        self.selected_button.set_item(
             self.item_selection_comboBox.currentData(Qt.UserRole + 1),
             self.item_selection_comboBox.currentText()
         )      
+        self.model.button_layout_dict[self.selected_button.get_button_id()]["item_id"] = self.selected_button.get_item_id()
         self.button_config_dialog.close()
 
-    def saveLayout(self):
-        for button in self.buttons:
-            self.button_layout_dict[button.getButtonId()]["item_id"] = button.getItemId()
-        self.dbo.save_button_layout(self.button_layout_dict)
-
 class OrderPanel(QWidget):
-    def __init__(self, dbo, parent = None):
+    def __init__(self, model, parent = None):
         super(OrderPanel, self).__init__(parent)
-        self.dbo = dbo
+        self.model = model
+
+        self.order_total = 0
+        self.row_count = 0
+        self.current_order = {
+            "date":"",
+            "time":"",
+            "order_details":{},
+            "total":""
+        }
+        
         # Appearance Setting 
         self.init_gui()
 
@@ -148,21 +146,10 @@ class OrderPanel(QWidget):
         self.layout.setAlignment(control_pallete_layout, Qt.AlignBottom)
   
     def init_order_detail_panel(self):
-        self.items_table = QTableWidget(100, 4, self)
+        self.item_table = QTableWidget(100, 4, self)
         item_table_layout = QVBoxLayout()
-        item_table_layout.addWidget(self.items_table)
+        item_table_layout.addWidget(self.item_table)
 
-        self.order_total = 0
-        self.current_order = {
-            "date":"",
-            "time":"",
-            "order_details":{},
-            "total":""
-        }
-        
-        self.items_dict = self.dbo.read_all_items(sort = "name")
-        self.row_count = 0
-        
         # Fill the table with empty invisble items
         for i in range(100):
             item_name_widget = QTableWidgetItem("")
@@ -179,25 +166,25 @@ class OrderPanel(QWidget):
             item_total_widget.setFlags(Qt.ItemFlag.ItemIsSelectable |
                 Qt.ItemFlag.ItemIsEnabled)
 
-            self.items_table.setItem(self.row_count, 0, item_name_widget)
-            self.items_table.setItem(self.row_count, 1, item_price_widget)
-            self.items_table.setItem(self.row_count, 2, item_quantity_widget)
-            self.items_table.setItem(self.row_count, 3, item_total_widget)
+            self.item_table.setItem(self.row_count, 0, item_name_widget)
+            self.item_table.setItem(self.row_count, 1, item_price_widget)
+            self.item_table.setItem(self.row_count, 2, item_quantity_widget)
+            self.item_table.setItem(self.row_count, 3, item_total_widget)
 
-            self.items_table.hideRow(self.row_count)
+            self.item_table.hideRow(self.row_count)
             self.row_count += 1
-        self.items_table.showRow(0)
+        self.item_table.showRow(0)
         self.row_count = 0
 
-        self.items_table.setHorizontalHeaderLabels(
+        self.item_table.setHorizontalHeaderLabels(
             ["Item Name", "Price", "Qty", "Total"])
-        self.items_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        self.item_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
 
-        self.items_table.setFixedWidth(400)
-        self.items_table.setColumnWidth(0, 200)
-        self.items_table.setColumnWidth(1, 50)
-        self.items_table.setColumnWidth(2, 50)
-        self.items_table.setColumnWidth(3, 50)
+        self.item_table.setFixedWidth(400)
+        self.item_table.setColumnWidth(0, 200)
+        self.item_table.setColumnWidth(1, 50)
+        self.item_table.setColumnWidth(2, 50)
+        self.item_table.setColumnWidth(3, 50)
 
         return item_table_layout
 
@@ -208,26 +195,26 @@ class OrderPanel(QWidget):
         total_button.clicked.connect(self.total)
         control_pallete_layout.addWidget(total_button, 0, 0)    
 
-        reset_button = QPushButton('Reset', self)
-        reset_button.clicked.connect(self.reset)
-        control_pallete_layout.addWidget(reset_button, 0, 1) 
+        clear_button = QPushButton('Clear', self)
+        clear_button.clicked.connect(self.clear_order)
+        control_pallete_layout.addWidget(clear_button, 0, 1) 
               
         return control_pallete_layout
 
     def add_item_to_order(self, item_id):
         price = 0
-        if item_id in self.items_dict:
-            price = self.items_dict[item_id]["price"]
-            self.items_table.item(self.row_count, 0).\
-                setText(self.items_dict[item_id]["name"])
-            self.items_table.item(self.row_count, 1).\
+        if item_id in self.model.item_dict:
+            price = self.model.item_dict[item_id]["price"]
+            self.item_table.item(self.row_count, 0).\
+                setText(self.model.item_dict[item_id]["name"])
+            self.item_table.item(self.row_count, 1).\
                 setText(str(price))
-            self.items_table.item(self.row_count, 2).\
+            self.item_table.item(self.row_count, 2).\
                 setText("1")
-            self.items_table.item(self.row_count, 3).\
+            self.item_table.item(self.row_count, 3).\
                 setText(str(price))
             self.row_count += 1
-            self.items_table.showRow(self.row_count)
+            self.item_table.showRow(self.row_count)
         if item_id in self.current_order["order_details"]:
             self.current_order["order_details"][item_id]["quantity"] += 1
             self.current_order["order_details"][item_id]["total"] += price
@@ -246,21 +233,19 @@ class OrderPanel(QWidget):
         self.current_order["order_details"] = list(self.current_order["order_details"].values())
         self.current_order["total"] = self.order_total
         
-        if self.dbo.insert_order(self.current_order):
-            # Reset table
+        if self.model.insert_order(self.current_order):
+            # clear table
             for i in range(self.row_count + 1):
-                self.items_table.item(i, 0).setText("")
-                self.items_table.item(i, 1).setText("0")
-                self.items_table.item(i, 2).setText("0")
-                self.items_table.item(i, 3).setText("0")
+                self.item_table.item(i, 0).setText("")
+                self.item_table.item(i, 1).setText("0")
+                self.item_table.item(i, 2).setText("0")
+                self.item_table.item(i, 3).setText("0")
 
-                self.items_table.hideRow(i)
+                self.item_table.hideRow(i)
             self.row_count = 0    
-            self.items_table.showRow(0)
+            self.item_table.showRow(0)
 
-            print(self.current_order)
-
-            # Reset global variable
+            # clear global variable
             self.order_total = 0
             self.current_order = self.current_order = {
                 "date":"",
@@ -269,17 +254,17 @@ class OrderPanel(QWidget):
                 "total":""
             }
 
-    def reset(self):
+    def clear_order(self):
         for i in range(self.row_count):
-            self.items_table.item(i, 0).setText("")
-            self.items_table.item(i, 1).setText("0")
-            self.items_table.item(i, 2).setText("0")
-            self.items_table.item(i, 3).setText("0")
-            self.items_table.hideRow(i)
+            self.item_table.item(i, 0).setText("")
+            self.item_table.item(i, 1).setText("0")
+            self.item_table.item(i, 2).setText("0")
+            self.item_table.item(i, 3).setText("0")
+            self.item_table.hideRow(i)
         self.row_count = 0  
-        self.items_table.showRow(0)
+        self.item_table.showRow(0)
 
-        self.current_order = self.current_order = {
+        self.current_order = {
             "date":"",
             "time":"",
             "order_details":{},
@@ -302,13 +287,13 @@ class Button(QPushButton):
 
         self.setFixedSize(100, 100)
         
-    def getButtonId(self):
+    def get_button_id(self):
         return self.button_id
     
-    def getItemId(self):
+    def get_item_id(self):
         return self.item_id
 
-    def setItem(self, item_id, item_name):
+    def set_item(self, item_id, item_name):
         self.item_id = item_id
         self.item_name = item_name
         self.setText(item_name)
