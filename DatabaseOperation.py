@@ -114,15 +114,15 @@ class DatabaseOperation:
 
     def save_button_layout(self, button_layout_dict):
         for key, value in button_layout_dict.items():
-            self.update_button(key, value["item_id"])
+            self.update_button(key, value["item_id"], value["style"])
 
     def insert_button(self, button):
         id = self.__insert_document(self.__button_layout, button)
         return id
 
-    def update_button(self, button_id, new_item_id):
+    def update_button(self, button_id, new_item_id, style):
         result = self.__update_document(
-            self.__button_layout, {"_id": ObjectId(button_id)}, {"item_id":new_item_id})
+            self.__button_layout, {"_id": ObjectId(button_id)}, {"item_id":new_item_id, "style":style})
         return result
 
     # Orders Specific Operations

@@ -43,12 +43,15 @@ class MainWindow(QMainWindow):
         self.orderPanel.show()
     
     def closeEvent(self, event):
-        self.dbo.close_client()
+        self.itemPanel.closeEvent(event)
+        self.orderPanel.closeEvent(event)
 
 def main():
     app = QApplication() 
-    app.setStyle("Window")      
     window = MainWindow()
+    with open('stylesheet.qss', 'r') as f:
+        style = f.read()
+        app.setStyleSheet(style)     
     window.show()
     sys.exit(app.exec())
 

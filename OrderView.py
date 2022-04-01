@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout, QVBoxLayout, QGridLayout, 
     QWidget, QMenu, 
     QTableWidget, QTableWidgetItem, QPushButton, QLabel,
-    QDialog, QComboBox, QSizePolicy, QHeaderView
+    QDialog, QColorDialog, QComboBox, QSizePolicy, QHeaderView
 )
 from datetime import datetime
 
@@ -26,6 +26,7 @@ class OrderView(QMainWindow):
         self.setCentralWidget(self.window)
         self.window.setLayout(self.layout)
 
+
         self.order_panel = OrderPanel(self.model, self)
         self.button_panel = ButtonPanel(self.model, self)
         self.layout.addWidget(self.button_panel)
@@ -40,6 +41,10 @@ class ButtonPanel(QWidget):
         self.parent = parent
         self.model = model
         self.selected_button = None
+        self.selected_button_color = {
+            "background-color":"white", 
+            "text-color":"black"
+        }
 
         self.init_gui()
         self.init_button_layout()
@@ -61,10 +66,16 @@ class ButtonPanel(QWidget):
         self.button_context_menu.addAction(clear_button_config_action)
 
         # Button Configuration Dialog
-        config_dialog_layout = QHBoxLayout()
+        config_dialog_layout = QGridLayout()
         self.button_config_dialog = QDialog(self)
         self.button_config_dialog.setLayout(config_dialog_layout)
 
+        self.colour_config_dialog = QColorDialog(self)
+        self.colour_config_dialog.setOptions(
+            QColorDialog.DontUseNativeDialog
+        )
+
+        self.item_selection_label = QLabel("Select Item", self.button_config_dialog)
         self.item_selection_comboBox = QComboBox(self.button_config_dialog)
         i = 0
         for key, value in self.model.item_dict.items():
@@ -72,11 +83,32 @@ class ButtonPanel(QWidget):
             self.item_selection_comboBox.setItemData(i, key, Qt.UserRole + 1)
             i += 1
 
+        self.preview_button = QPushButton("PREVIEW", self.button_config_dialog)
+        self.preview_button.setFixedSize(100, 100)
+        self.text_colour_button = QPushButton(
+            "Text Colour", self.button_config_dialog)
+        self.text_colour_button.clicked.connect(
+            self.init_text_colour_dialog)
+
+        self.background_colour_button = QPushButton(
+            "Button Colour", self.button_config_dialog)
+        self.background_colour_button.clicked.connect(
+            self.init_background_colour_dialog)
+
         save_config_button = QPushButton("Save", self.button_config_dialog)
         save_config_button.clicked.connect(self.save_button_config)
+        
+        reset_config_button = QPushButton("Reset", self.button_config_dialog)
+        reset_config_button.clicked.connect(self.reset_button_config)
 
-        config_dialog_layout.addWidget(self.item_selection_comboBox)
-        config_dialog_layout.addWidget(save_config_button)
+
+        config_dialog_layout.addWidget(self.item_selection_label, 0, 0, 1, 1)
+        config_dialog_layout.addWidget(self.item_selection_comboBox, 0, 1, 1, 1)
+        config_dialog_layout.addWidget(self.preview_button, 1, 0, 2, 1)
+        config_dialog_layout.addWidget(self.text_colour_button, 1, 1, 1, 1)
+        config_dialog_layout.addWidget(self.background_colour_button, 2, 1, 1, 1)
+        config_dialog_layout.addWidget(save_config_button, 3, 0, 1, 1)
+        config_dialog_layout.addWidget(reset_config_button, 3, 1, 1, 1)
 
     def init_button_layout(self):
         for key, value in self.model.button_layout_dict.items():
@@ -84,13 +116,14 @@ class ButtonPanel(QWidget):
             row = value["row"]
             col = value["column"]
             item_id = value["item_id"]
+            style = value["style"]
 
             if item_id in self.model.item_dict:
                 item_name = self.model.item_dict[item_id]["name"]
             else:
                 item_name = "EMPTY"
 
-            button = Button(button_id, item_id, item_name, self)
+            button = Button(button_id, item_id, item_name, style, self)
             button.setContextMenuPolicy(Qt.CustomContextMenu)
             button.customContextMenuRequested.connect(self.init_context_menu)
             button.ITEM_SELECTED.connect(self.parent.order_panel.add_item_to_order)
@@ -107,13 +140,36 @@ class ButtonPanel(QWidget):
     def init_button_config_dialog(self, s):
         self.button_config_dialog.exec()
     
+    def init_background_colour_dialog(self):
+        colour = self.colour_config_dialog.getColor().name()
+        self.selected_button_color["background-color"] = colour
+        self.preview_button.setStyleSheet(
+            self.preview_button.styleSheet() +
+            "background-color: " + colour + ";")
+
+    def init_text_colour_dialog(self):
+        colour = self.colour_config_dialog.getColor().name()
+        self.selected_button_color["text-color"] = colour
+        self.preview_button.setStyleSheet(
+            self.preview_button.styleSheet() +
+            "color: " + colour + ";"
+        )
+
     def save_button_config(self):
         self.selected_button.set_item(
             self.item_selection_comboBox.currentData(Qt.UserRole + 1),
             self.item_selection_comboBox.currentText()
         )      
+        self.selected_button.set_style(
+            self.selected_button_color["background-color"],
+            self.selected_button_color["text-color"],
+        )
         self.model.button_layout_dict[self.selected_button.get_button_id()]["item_id"] = self.selected_button.get_item_id()
+        self.model.button_layout_dict[self.selected_button.get_button_id()]["style"] = self.selected_button.get_style()
         self.button_config_dialog.close()
+
+    def reset_button_config(self):
+        print("RESET")
 
 class OrderPanel(QWidget):
     def __init__(self, model, parent = None):
@@ -179,6 +235,8 @@ class OrderPanel(QWidget):
         self.item_table.setHorizontalHeaderLabels(
             ["Item Name", "Price", "Qty", "Total"])
         self.item_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        self.item_table.verticalHeader().setVisible(False)
+
 
         self.item_table.setFixedWidth(400)
         self.item_table.setColumnWidth(0, 200)
@@ -274,17 +332,20 @@ class OrderPanel(QWidget):
 class Button(QPushButton):
     ITEM_SELECTED = Signal(str)
 
-    def __init__(self, button_id, item_id, item_name, parent = None):
+    def __init__(self, button_id, item_id, item_name, style, parent = None):
         super(Button, self).__init__(parent)
         self.parent = parent
         self.button_id = button_id
         self.item_id = item_id
         self.item_name = item_name
+        self.background_color = "white"
+        self.text_color = "black"
+        self.style = style
+
+        self.setStyleSheet(self.style)
         self.setText(item_name)
 
-        #self.clicked.connect(self.onClick)
         self.installEventFilter(self)
-
         self.setFixedSize(100, 100)
         
     def get_button_id(self):
@@ -297,6 +358,27 @@ class Button(QPushButton):
         self.item_id = item_id
         self.item_name = item_name
         self.setText(item_name)
+
+    def set_style(self, background_color, text_color):
+        self.style = "background-color: " + background_color + ";" +  "color: "+ text_color + ";" +  "border: none; padding: 6px;"
+        self.setStyleSheet(self.style)
+
+    def get_style(self):
+        return self.style
+
+    def set_background_color(self, color):
+        self.background_color = color
+        self.style = "background-color: " + self.background_color + ";"
+        +  "color: " + self.text_color + ";" 
+        +  "border: none; padding: 6px;"
+        self.setStyleSheet(self.style)
+
+    def set_background_color(self, color):
+        self.text_color = color
+        self.style = "background-color: " + self.background_color + ";"
+        +  "color: " + self.text_color + ";" 
+        +  "border: none; padding: 6px;"
+        self.setStyleSheet(self.style)
 
     def eventFilter(self, source, event):
         if event.type() == QEvent.MouseButtonPress:

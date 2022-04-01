@@ -45,10 +45,10 @@ class Model(object):
 
     def save_button_layout(self):
         for key, value in self.button_layout_dict.items():
-            self.update_button(key, value["item_id"])
+            self.update_button(key, value["item_id"], value["style"])
 
-    def update_button(self, button_id, new_item_id):
-        return self.dbo.update_button(button_id, new_item_id)
+    def update_button(self, button_id, new_item_id, style):
+        return self.dbo.update_button(button_id, new_item_id, style)
 
     def insert_order(self, order):
         return self.dbo.insert_order(order)
