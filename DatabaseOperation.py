@@ -3,14 +3,15 @@ from pymongo.collation import Collation
 from bson.objectid import ObjectId
 
 class DatabaseOperation:
-    def __init__(self, connection_str):
+    def __init__(self, username, password):
+        connection_str = "mongodb+srv://" + username + ":" + password + "@cluster0.wewjs.mongodb.net/shop?retryWrites=true&w=majority"
         self.__client = MongoClient(connection_str)
-
+        if self.__client is None:
+            return
         db = self.__client["shop"]
         self.__orders = db["orders"]
         self.__items = db["items"]
         self.__button_layout = db["button_layout"]
-
     """PRIVATE
     
     """
@@ -40,24 +41,6 @@ class DatabaseOperation:
 
     """PUBLIC
     """
-    # Item Specific Operations
-    def empty_item(self):
-        return {
-            "_id":"",
-            "name":"",
-            "price":"",
-            "category":[]
-        }
-
-    def item_document(self, item_id = "", name = "", price = "", category = []):
-        item_document = {
-            "_id": item_id,
-            "name": name,
-            "price": price,
-            "category": category
-        }
-        return item_document
-        
     def validate_item(self, item):
         if not item["name"]:
             raise ValueError("Item name cannot be empty")

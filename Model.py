@@ -1,14 +1,27 @@
+from DatabaseOperation import DatabaseOperation
+
 class Model(object):
-    def __init__(self, dbo):
-        self.dbo = dbo
+    def __init__(self, username, password):
+        self.dbo = DatabaseOperation(username, password)
         self.item_dict = self.dbo.read_all_items(sort = "name")
         self.button_layout_dict = self.dbo.read_button_layout()
 
     def empty_item(self):
-        return self.dbo.empty_item()
+        return {
+            "_id":"",
+            "name":"",
+            "price":"",
+            "category":[]
+        }
 
     def item_document(self, item_id = "", name = "", price = "", category = []):
-        return self.dbo.item_document(item_id, name, price, category)
+        item_document = {
+            "_id": item_id,
+            "name": name,
+            "price": price,
+            "category": category
+        }
+        return item_document
         
     def validate_item(self, item):
         if not item["name"]:
