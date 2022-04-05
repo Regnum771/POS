@@ -3,14 +3,15 @@ from pymongo.collation import Collation
 from bson.objectid import ObjectId
 
 class DatabaseOperation:
-    def __init__(self, connection_str):
+    def __init__(self, username, password):
+        connection_str = "mongodb+srv://" + username + ":" + password + "@cluster0.wewjs.mongodb.net/shop?retryWrites=true&w=majority"
         self.__client = MongoClient(connection_str)
-
+        if self.__client is None:
+            return
         db = self.__client["shop"]
         self.__orders = db["orders"]
         self.__items = db["items"]
         self.__button_layout = db["button_layout"]
-
     """PRIVATE
     
     """
@@ -40,25 +41,7 @@ class DatabaseOperation:
 
     """PUBLIC
     """
-    # Item Specific Operations
-    def empty_item():
-        return {
-            "_id":"",
-            "name":"",
-            "price":"",
-            "category":[]
-        }
-
-    def item_document(item_id = "", name = "", price = "", category = []):
-        item_document = {
-            "_id": item_id,
-            "name": name,
-            "price": price,
-            "category": category
-        }
-        return item_document
-        
-    def validate_item(item):
+    def validate_item(self, item):
         if not item["name"]:
             raise ValueError("Item name cannot be empty")
         if not item["price"]:
@@ -114,15 +97,15 @@ class DatabaseOperation:
 
     def save_button_layout(self, button_layout_dict):
         for key, value in button_layout_dict.items():
-            self.update_button(key, value["item_id"])
+            self.update_button(key, value["item_id"], value["style"])
 
     def insert_button(self, button):
         id = self.__insert_document(self.__button_layout, button)
         return id
 
-    def update_button(self, button_id, new_item_id):
+    def update_button(self, button_id, new_item_id, style):
         result = self.__update_document(
-            self.__button_layout, {"_id": ObjectId(button_id)}, {"item_id":new_item_id})
+            self.__button_layout, {"_id": ObjectId(button_id)}, {"item_id":new_item_id, "style":style})
         return result
 
     # Orders Specific Operations

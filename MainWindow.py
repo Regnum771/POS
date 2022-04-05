@@ -1,19 +1,14 @@
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget,           
+    QMainWindow, QWidget,           
     QVBoxLayout, 
     QPushButton,
 )
 from ItemView import ItemView
 from OrderView import OrderView
-import sys
-from DatabaseOperation import DatabaseOperation
-
 class MainWindow(QMainWindow):
-    def __init__(self, parent = None):
+    def __init__(self, model, parent = None):
         super(MainWindow, self).__init__(parent)
-        connection_str = "mongodb+srv://Regnum771:Regnum771@cluster0.wewjs.mongodb.net/shop?retryWrites=true&w=majority"
-        self.dbo = DatabaseOperation(connection_str)
-
+        self.model = model
         self.title = 'Item Panel'
         self.init_gui()
     
@@ -24,13 +19,13 @@ class MainWindow(QMainWindow):
         self.layout = QVBoxLayout(self.window)
         self.window.setLayout(self.layout)
 
-        self.itemPanel = ItemView(self.dbo, self)
+        self.itemPanel = ItemView(self.model, self)
         self.itemPanel_button = QPushButton(self)
         self.itemPanel_button.setText("Item Panel")
         self.itemPanel_button.clicked.connect(self.openItemPanel)
         self.layout.addWidget(self.itemPanel_button)
 
-        self.orderPanel = OrderView(self.dbo, self)
+        self.orderPanel = OrderView(self.model, self)
         self.orderPanel_button = QPushButton(self)
         self.orderPanel_button.setText("Order Panel")
         self.orderPanel_button.clicked.connect(self.openOrderPanel)
@@ -43,13 +38,5 @@ class MainWindow(QMainWindow):
         self.orderPanel.show()
     
     def closeEvent(self, event):
-        self.dbo.close_client()
-
-def main():
-    app = QApplication()       
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec())
-
-if __name__ == "__main__":
-    main()
+        self.itemPanel.closeEvent(event)
+        self.orderPanel.closeEvent(event)

@@ -1,4 +1,3 @@
-
 from PySide6.QtGui import Qt
 from PySide6.QtWidgets import (
     QMainWindow, 
@@ -9,9 +8,9 @@ from PySide6.QtWidgets import (
 )
 
 class ItemView(QMainWindow):
-    def __init__(self, dbo, parent = None):
+    def __init__(self, model, parent = None):
         super(ItemView, self).__init__(parent)
-        self.dbo = dbo
+        self.model = model
         self.parent = parent
 
         self.title = 'Item View'
@@ -24,16 +23,17 @@ class ItemView(QMainWindow):
         self.layout = QHBoxLayout()
         self.setCentralWidget(self.window)
         self.window.setLayout(self.layout)
-        self.item_panel = ItemPanel(self.dbo, self)
+        self.item_panel = ItemPanel(self.model, self)
         self.layout.addWidget(self.item_panel)
 
     def closeEvent(self, event):
-        self.item_panel.updateInfo()
+        #self.item_panel.updateInfo()
+        print("ok")
 
 class ItemPanel(QWidget):
-    def __init__(self, dbo, parent = None):
+    def __init__(self, model, parent = None):
         super(ItemPanel, self).__init__(parent)
-        self.dbo = dbo
+        self.model = model
         self.parent = parent
         self.init_gui()
 
@@ -66,7 +66,6 @@ class ItemPanel(QWidget):
         self.items_table.horizontalHeader().setStretchLastSection(True)
         self.items_table.hideColumn(1)
 
-        self.items_dict = self.dbo.read_all_items(sort = "name")
         self.item = None
         self.row_count = 0
         
@@ -85,7 +84,7 @@ class ItemPanel(QWidget):
 
         # Fill the table with items from the database
         self.row_count = 0
-        for key, item in self.items_dict.items():
+        for key, item in self.model.item_dict.items():
             item_name_widget = self.items_table.item(self.row_count, 0)
             item_name_widget.setText(item["name"])
             
@@ -95,6 +94,7 @@ class ItemPanel(QWidget):
             self.items_table.showRow(self.row_count)
             self.row_count += 1
         
+        self.items_table.showRow(self.row_count)
         self.items_table.currentItemChanged.connect(self.load)
 
         item_table_layout.addWidget(self.items_table)
@@ -177,12 +177,11 @@ class ItemPanel(QWidget):
 
     """
     def delete(self):
-        if not self.item["_id"]:
-            self.items_table.removeRow(self.items_table.currentRow())
-        else:    
-            if self.dbo.delete_item(self.item["_id"]):
-                self.items_dict.pop(self.item["_id"]) 
+        if self.item["_id"]: 
+            if self.model.delete_item(self.item["_id"]):
+                self.model.item_dict.pop(self.item["_id"]) 
                 self.items_table.removeRow(self.items_table.currentRow())
+                self.error_message.setText("Item deleted successfully")
                 self.row_count -= 1
 
     def new(self):
@@ -205,35 +204,40 @@ class ItemPanel(QWidget):
         item_category = self.item_category_textbox.text().split(",")
 
         if self.item["_id"]:
-            self.item = self.dbo.item_document(
+            self.item = self.model.item_document(
                 self.item["_id"], item_name, item_price, item_category)
             
             try:
-                self.dbo.update_item(self.item["_id"], self.item)
+                self.model.update_item(self.item["_id"], self.item)
 
-                self.items_dict[self.item["_id"]]["name"] = item_name
-                self.items_dict[self.item["_id"]]["price"] = item_price
-                self.items_dict[self.item["_id"]]["category"] = item_category
+                self.model.item_dict[self.item["_id"]]["name"] = item_name
+                self.model.item_dict[self.item["_id"]]["price"] = item_price
+                self.model.item_dict[self.item["_id"]]["category"] = item_category
                 self.items_table.currentItem().setText(item_name)
             except ValueError as e:
                 self.error_message.setText(str(e))
                 self.error_message.exec()
         else:
-            self.item = self.dbo.item_document(
+            self.item = self.model.item_document(
                 "", item_name, item_price, item_category)
             
             try:
-                inserted_item_id = str(self.dbo.insert_item(self.item))
+                inserted_item_id = str(self.model.insert_item(self.item))
                 self.item["_id"] = inserted_item_id
 
-                self.items_dict[inserted_item_id] = self.dbo.item_document(
+                self.model.item_dict[inserted_item_id] = self.model.item_document(
                     inserted_item_id, item_name, item_price, item_category
                 )
 
                 self.items_table.item(self.row_count, 0).setText(item_name)
                 self.items_table.item(self.row_count, 1).setText(inserted_item_id)
 
-                self.row_count += 1               
+                self.error_message.setText("Item inserted successfully")
+                self.error_message.exec()
+
+                self.row_count += 1
+                self.items_table.showRow(self.row_count)
+               
             except ValueError as e:
                 self.error_message.setText(str(e))
                 self.error_message.exec()
@@ -253,8 +257,8 @@ class ItemPanel(QWidget):
 
         # Fetch item data from item dictionary
         selected_item_id = self.items_table.item(current.row(), 1).text()
-        if selected_item_id in self.items_dict:
-            self.item = self.items_dict[selected_item_id]
+        if selected_item_id in self.model.item_dict:
+            self.item = self.model.item_dict[selected_item_id]
             self.item_name_textbox.setText(self.item["name"])
             self.item_price_textbox.setText(str(self.item["price"]))
             if len(self.item["category"]) < 1:
@@ -264,7 +268,7 @@ class ItemPanel(QWidget):
                 self.item_category_textbox.setText(
                     ",".join(self.item["category"]))
         else:    
-            self.item = self.dbo.empty_item()
+            self.item = self.model.empty_item()
             self.item_name_textbox.setText("")
             self.item_price_textbox.setText("")
             self.item_category_textbox.setText("")
