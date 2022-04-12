@@ -1,8 +1,10 @@
-# POS
-A simple Point of Sale system made with PyQt
+<p align="center"><img src="res/images/onkodicom_main_banner.png?raw=true" alt="main-icon-onko-dicom" width="250"></p>
 
-Currently, the system is capable of CRUD operations on items
+### Simple POS
+Simple POS provides a streamlined and clean registry interface for small business. 
 
-The user can also rearrange the item to button mapping
+### Installation
+Installation instructions:
 
-Adding item to order has yet to be implemented.
+<pre><code>git clone https://github.com/didymo/OnkoDICOM.git
+cd OnkoDICOM</code><pre>
