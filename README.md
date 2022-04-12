@@ -4,7 +4,5 @@ Simple POS provides a streamlined and clean registry interface for small busines
 ### Installation
 Installation instructions:
 
-<pre><code>
-git clone https://github.com/didymo/OnkoDICOM.git
-cd OnkoDICOM
-</code></pre>
+<pre><code>git clone https://github.com/didymo/OnkoDICOM.git
+cd OnkoDICOM</code></pre>
