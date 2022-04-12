@@ -2,7 +2,8 @@
 Simple POS provides a streamlined and clean registry interface for small business. 
 
 ### Installation
-</b>Windows</b>
+<b>Windows</b>
+
 In order to run OnkoDICOM on Windows, you will need to have installed:
 
 64-bit Python 3.7 or later. SimplePOS will not run on 64-bit computers that have a 32-bit version of Python installed. Additionally, OnkoDICOM has not been tested on 32-bit machines.
